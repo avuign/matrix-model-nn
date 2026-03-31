@@ -14,6 +14,8 @@ class MatrixNetwork(nn.Module):
 
         self.net = nn.Sequential(*layers)
 
+        nn.init.constant_(self.net[-1].bias, 1.0)
+
     def forward(self, x):
         x = x.unsqueeze(-1)
         return self.net(x).squeeze(-1)

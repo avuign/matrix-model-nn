@@ -5,12 +5,12 @@ from config import *
 from model import MatrixNetwork
 
 
-def compute_loss(model, V, grid):
+def compute_loss(model, V, grid, nu=0.5):
 
     f = model(grid)
-
-    Z = torch.trapezoid(torch.exp(f), grid, dim=0)
-    rho = torch.exp(f) / Z
+    rho = torch.sqrt(torch.relu(f))
+    Z = torch.trapezoid(rho, grid, dim=0)
+    rho = rho / Z
 
     potential_term = torch.trapezoid(V(grid) * rho, grid, dim=0)
 
@@ -28,7 +28,14 @@ def compute_loss(model, V, grid):
 
     kernel_term = torch.trapezoid(torch.trapezoid(integrand, grid, dim=0), grid)
 
-    return potential_term - kernel_term
+    loss = potential_term - kernel_term
+
+    if nu != 0.5:
+        positive_mask = grid > 0
+        filling = torch.trapezoid(rho[positive_mask], grid[positive_mask])
+        loss += 5 * (filling - nu) ** 2
+
+    return loss
 
 
 def train(model, V, grid, num_epochs, lr):
@@ -40,7 +47,7 @@ def train(model, V, grid, num_epochs, lr):
         epoch_loss = 0
 
         optimizer.zero_grad()
-        loss = compute_loss(model, V, grid)
+        loss = compute_loss(model, V, grid, nu=FILLING_FRAC)
         loss.backward()
         optimizer.step()
         epoch_loss += loss.item()

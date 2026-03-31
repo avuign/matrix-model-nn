@@ -18,8 +18,9 @@ def plot(model, grid, args, save_path=None):
 
     # Learned density
     f = model(grid)
-    Z = torch.trapezoid(torch.exp(f), grid, dim=0)
-    rho = torch.exp(f) / Z
+    rho = torch.sqrt(torch.relu(f))
+    Z = torch.trapezoid(rho, grid, dim=0)
+    rho = rho / Z
 
     # analytic results
     if args.m > 0:
@@ -40,35 +41,45 @@ def plot(model, grid, args, save_path=None):
             * (2 * g * torch.abs(grid))
         ) / torch.pi
 
+    print(grid[-1])
+
     fig, ax = plt.subplots(figsize=(7, 4.5), dpi=150)
 
     ax.plot(
-        grid.numpy(),
+        grid.detach().numpy(),
         rho.detach().numpy(),
         color="#d62728",
         linewidth=2.2,
         label="Neural network",
     )
-    ax.plot(
-        grid.numpy(),
-        rho_analytic.numpy(),
-        color="black",
-        linestyle="--",
-        linewidth=1.4,
-        label="Analytic",
-    )
+
+    if FILLING_FRAC == 0.5:
+        ax.plot(
+            grid.detach().numpy(),
+            rho_analytic.detach().numpy(),
+            color="black",
+            linestyle="--",
+            linewidth=1.4,
+            label="Analytic",
+        )
 
     ax.set_xlabel(r"$\lambda$", fontsize=15)
     ax.set_ylabel(r"$\rho(\lambda)$", fontsize=15)
     if args.g4 > 0:
         ax.set_title(
-            rf"$V(\lambda) = \frac{{1}}{{2}}\lambda^2 + {args.g4}\,\lambda^4$",
+            rf"$V(\lambda) = \frac{{{args.m}}}{{2}}\lambda^2 + {args.g4}\,\lambda^4$",
             fontsize=15,
         )
-        if args.g4 == 0:
-            ax.set_title(rf"$V(\lambda) = \frac{{1}}{{2}}\lambda^2 $", fontsize=15)
+    if args.g4 == 0.0:
+        ax.set_title(rf"$V(\lambda) = \frac{{{args.m}}}{{2}}\lambda^2 $", fontsize=15)
+
+    if FILLING_FRAC != 0.5:
+        ax.set_title(
+            rf"$V(\lambda) = \frac{{{args.m}}}{{2}}\lambda^2, \quad \nu={FILLING_FRAC} $",
+            fontsize=15,
+        )
     ax.legend(frameon=False, fontsize=12)
-    ax.set_xlim(grid[0].item(), grid[-1].item())
+    ax.set_xlim(1.1 * grid[0].item(), 1.1 * grid[-1].item())
     ax.set_ylim(bottom=0)
     ax.tick_params(direction="in", top=True, right=True)
     fig.tight_layout()
