@@ -8,7 +8,7 @@ Instead of solving saddle-point equations analytically, we parameterize the eige
 
 In the large $N$ limit of a Hermitian one-matrix model with potential $V(\lambda)$, the eigenvalue density minimizes the action functional
 
-$$S[\rho] = N^2 \left[\int V(\lambda)\,\rho(\lambda)\,d\lambda - \int\!\!\int \log|\lambda - \mu|\,\rho(\lambda)\,\rho(\mu)\,d\lambda\,d\mu\right]$$
+$$S[\rho] = N^2 \left[\int V(\lambda)\,\rho(\lambda)\,d\lambda - \int \int \log|\lambda - \mu|\,\rho(\lambda)\,\rho(\mu)\,d\lambda\,d\mu\right]$$
 
 subject to $\rho \geq 0$ and $\int \rho = 1$.
 
