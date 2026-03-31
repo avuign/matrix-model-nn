@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
 
+from config import HIDDEN_DIM, N_LAYERS
+
 
 class MatrixNetwork(nn.Module):
-    def __init__(self, hidden_dim=256, num_layers=6):
+    def __init__(self, hidden_dim=HIDDEN_DIM, num_layers=N_LAYERS):
         super().__init__()
         layers = [nn.Linear(1, hidden_dim), nn.Tanh()]
         for _ in range(num_layers - 1):

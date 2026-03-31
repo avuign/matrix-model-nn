@@ -8,21 +8,27 @@ from model import MatrixNetwork
 def compute_loss(model, V, grid):
 
     f = model(grid)
+
     Z = torch.trapezoid(torch.exp(f), grid, dim=0)
     rho = torch.exp(f) / Z
 
-    int1 = torch.trapezoid(V(grid) * rho, grid, dim=0)
+    potential_term = torch.trapezoid(V(grid) * rho, grid, dim=0)
+
     xi, yi = torch.meshgrid(grid, grid, indexing="ij")
+    diff = torch.abs(xi - yi)
+
+    mask = ~torch.eye(len(grid), dtype=torch.bool)
+    diff = diff + (~mask).float()  # put 1 on diagonal so log(1) = 0
+
+    log_matrix = torch.log(diff) * mask
 
     rho_matrix = torch.outer(rho, rho)
-    log_matrix = torch.log(torch.abs(xi - yi))
-    for i in range(len(grid)):
-        log_matrix[i, i] = 0
+
     integrand = rho_matrix * log_matrix
 
-    int2 = torch.trapezoid(torch.trapezoid(integrand, grid, dim=0), grid)
+    kernel_term = torch.trapezoid(torch.trapezoid(integrand, grid, dim=0), grid)
 
-    return int1 - int2
+    return potential_term - kernel_term
 
 
 def train(model, V, grid, num_epochs, lr):
@@ -39,18 +45,22 @@ def train(model, V, grid, num_epochs, lr):
         optimizer.step()
         epoch_loss += loss.item()
 
-        if epoch % 500 == 1 or epoch == 0:
+        if epoch % 500 == 0 or epoch == num_epochs - 1:
             print(f"Epoch {epoch + 1}, Loss: {epoch_loss}")
 
 
 if __name__ == "__main__":
+    args = get_args()
     model = MatrixNetwork()
 
-    grid = GRID
+    grid = args.L * torch.linspace(-1, 1, GRID_PTS)
+
+    def V(x):
+        return (args.m) * (x**2) / 2 + args.g4 * (x**4)
 
     print("Starting to train..")
-    train(model, V, grid, N_EPOCHS, LR)
+    train(model, V, grid, args.n_epochs, args.lr)
 
-    print("Neural network trained. Saving weights.")
+    print(f"Neural network trained. Saving weights at " + WEIGHT_PATH)
 
-    torch.save(model.state_dict(), "matrix_model_weights_gaussian.pt")
+    torch.save(model.state_dict(), WEIGHT_PATH)
