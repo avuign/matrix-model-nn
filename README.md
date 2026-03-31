@@ -1,2 +1,3 @@
-# matrix-model-nn
-A neural network approach to solve matrix models
+# Neural Network for matrix models
+
+A neural network approach to solve matrix models.

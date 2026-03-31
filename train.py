@@ -27,7 +27,7 @@ def compute_loss(model, V, grid):
 
 def train(model, V, grid, num_epochs, lr):
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.1)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     for epoch in range(num_epochs):
         model.train()
@@ -39,7 +39,7 @@ def train(model, V, grid, num_epochs, lr):
         optimizer.step()
         epoch_loss += loss.item()
 
-        if epoch % 500 == 0:
+        if epoch % 500 == 1 or epoch == 0:
             print(f"Epoch {epoch + 1}, Loss: {epoch_loss}")
 
 
@@ -49,8 +49,8 @@ if __name__ == "__main__":
     grid = GRID
 
     print("Starting to train..")
-    train(model, V, grid, 5000, 0.001)
+    train(model, V, grid, N_EPOCHS, LR)
 
     print("Neural network trained. Saving weights.")
 
-    torch.save(model.state_dict(), "matrix_model_weights.pt")
+    torch.save(model.state_dict(), "matrix_model_weights_gaussian.pt")
