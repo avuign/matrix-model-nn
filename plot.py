@@ -16,14 +16,13 @@ def plot(model, grid, args, save_path=None):
         }
     )
 
-    # Learned density
     f = model(grid)
-    rho = torch.sqrt(torch.relu(f))
+    rho = torch.exp(f)
     Z = torch.trapezoid(rho, grid, dim=0)
     rho = rho / Z
 
     # analytic results
-    if args.m > 0:
+    if args.m > 0 and args.plot_an:
         g = args.g4
         a = math.sqrt((math.sqrt(1 + 48 * g) - 1) / (6 * g)) if g > 0 else 2.0
         rho_analytic = (
@@ -31,7 +30,7 @@ def plot(model, grid, args, save_path=None):
             * (2 * g * grid**2 + 0.5 + g * a**2)
         ) / torch.pi
 
-    if args.m < 0:
+    if args.m < 0 and args.plot_an == 0:
         g = args.g4
         b1 = math.sqrt(1 / (4 * g) - 1 / math.sqrt(g))
         b2 = math.sqrt(1 / (4 * g) + 1 / math.sqrt(g))
@@ -53,7 +52,7 @@ def plot(model, grid, args, save_path=None):
         label="Neural network",
     )
 
-    if FILLING_FRAC == 0.5:
+    if args.plot_an:
         ax.plot(
             grid.detach().numpy(),
             rho_analytic.detach().numpy(),

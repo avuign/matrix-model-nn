@@ -8,7 +8,8 @@ from model import MatrixNetwork
 def compute_loss(model, V, grid, nu=0.5):
 
     f = model(grid)
-    rho = torch.sqrt(torch.relu(f))
+    # rho = torch.sqrt(torch.relu(f))
+    rho = torch.exp(f)
     Z = torch.trapezoid(rho, grid, dim=0)
     rho = rho / Z
 
@@ -63,7 +64,12 @@ if __name__ == "__main__":
     grid = args.L * torch.linspace(-1, 1, GRID_PTS)
 
     def V(x):
-        return (args.m) * (x**2) / 2 + args.g4 * (x**4)
+        return (
+            (args.m) * (x**2) / 2
+            + args.g4 * (x**4)
+            + args.g6 * (x**6)
+            + args.g8 * (x**8)
+        )
 
     print("Starting to train..")
     train(model, V, grid, args.n_epochs, args.lr)
