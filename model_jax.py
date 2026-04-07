@@ -21,4 +21,4 @@ class MatrixNetwork(nn.Module):
         z = nn.Dense(1)(z)
         z = z[..., 0]
 
-        return nn.softplus(z)
+        return jax.nn.relu(z)
