@@ -11,7 +11,7 @@ from model_jax import MatrixNetwork
 def compute_loss(params, model, V, grid, nu=0.5):
 
     f = model.apply({"params": params}, grid)
-    rho = jnp.exp(f)
+    rho = jax.nn.softplus(f)
     Z = jnp.trapezoid(rho, grid)
     rho = rho / Z
 

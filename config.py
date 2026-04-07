@@ -1,9 +1,9 @@
 import argparse
 
-HIDDEN_DIM = 256
-N_LAYERS = 4
+HIDDEN_DIM = 128
+N_LAYERS = 6
 
-GRID_PTS = 500
+GRID_PTS = 800
 
 
 def get_args():

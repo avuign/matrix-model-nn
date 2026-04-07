@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from config import *
-from model import MatrixNetwork
+from model_torch import MatrixNetwork
 
 
 def compute_loss(model, V, grid, nu=0.5):

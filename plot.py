@@ -1,14 +1,15 @@
 import math
 import pickle
 
+import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
 from config import *
-from model import MatrixNetwork as TorchModel
 from model_jax import MatrixNetwork as JaxModel
+from model_torch import MatrixNetwork as TorchModel
 
 
 def plot_torch(model, grid, args, save_path=None):
@@ -20,7 +21,7 @@ def plot_torch(model, grid, args, save_path=None):
 
 def plot_jax(params, model, grid, args, save_path=None):
     f = model.apply({"params": params}, grid)
-    rho = jnp.exp(f)
+    rho = jax.nn.softplus(f)
     rho = rho / jnp.trapezoid(rho, grid)
     plot(np.array(rho), np.array(grid), args, save_path)
 

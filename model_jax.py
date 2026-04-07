@@ -12,6 +12,6 @@ class MatrixNetwork(nn.Module):
         x = x[..., None]
         for _ in range(self.num_layers):
             x = nn.Dense(self.hidden_dim)(x)
-            x = nn.tanh(x)
+            x = nn.gelu(x)
         x = nn.Dense(1)(x)
         return x[..., 0]
