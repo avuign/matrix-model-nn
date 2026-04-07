@@ -1,4 +1,6 @@
 import flax.linen as nn
+import jax
+import jax.numpy as jnp
 
 from config import HIDDEN_DIM, N_LAYERS
 
@@ -9,9 +11,14 @@ class MatrixNetwork(nn.Module):
 
     @nn.compact
     def __call__(self, x):
-        x = x[..., None]
+        R_raw = self.param("R_raw", lambda key, shape: jnp.array(1.0), ())
+        R = nn.softplus(R_raw)
+
+        z = x[..., None]
         for _ in range(self.num_layers):
-            x = nn.Dense(self.hidden_dim)(x)
-            x = nn.gelu(x)
-        x = nn.Dense(1)(x)
-        return x[..., 0]
+            z = nn.Dense(self.hidden_dim)(z)
+            z = nn.gelu(z)
+        z = nn.Dense(1)(z)
+        z = z[..., 0]
+
+        return nn.softplus(z)

@@ -20,8 +20,7 @@ def plot_torch(model, grid, args, save_path=None):
 
 
 def plot_jax(params, model, grid, args, save_path=None):
-    f = model.apply({"params": params}, grid)
-    rho = jax.nn.softplus(f)
+    rho = model.apply({"params": params}, grid)
     rho = rho / jnp.trapezoid(rho, grid)
     plot(np.array(rho), np.array(grid), args, save_path)
 
