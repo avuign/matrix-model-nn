@@ -1,94 +1,166 @@
-# Neural Network for matrix models
+# Neural Network for Matrix Models
 
-A neural network approach to solve large $N$ matrix models.
+A neural network approach to compute the large $N$ eigenvalue density of Hermitian one-matrix models. Two independent implementations are provided: **JAX/Flax/Optax** and **PyTorch**.
 
-We parameterize the eigenvalue density $\rho(\lambda)$ as a neural network and minimize the matrix model effective action directly via gradient descent.
-
-## The idea
+## The Idea
 
 In the large $N$ limit of a Hermitian one-matrix model with potential $V(\lambda)$, the eigenvalue density minimizes the action functional
 
-$$S[\rho] = N^2 \left[\int V(\lambda)\rho(\lambda)d\lambda - \int \int \log|\lambda - \mu|\rho(\lambda)\rho(\mu)d\lambda d\mu\right]$$
+$$S[\rho] = N^2 \left[\int V(\lambda)\,\rho(\lambda)\,d\lambda - \iint \log|\lambda - \mu|\,\rho(\lambda)\,\rho(\mu)\,d\lambda\,d\mu\right]$$
 
 subject to $\rho \geq 0$ and $\int \rho = 1$.
 
-We represent $\rho$ using a neural network $f_\theta\colon \mathbb{R} \to \mathbb{R}$ via
+The density is represented by a neural network $f_\theta\colon \mathbb{R} \to \mathbb{R}$, normalized to satisfy both constraints by construction. The action is discretized on a uniform grid via the trapezoidal rule and minimized with standard backpropagation.
 
-$$\rho_\theta(\lambda) = \frac{\sqrt{\mathrm{ReLU}(f_\theta(\lambda))}}{\int \sqrt{\mathrm{ReLU}(f_\theta(\lambda'))}\,d\lambda'}$$
+## Quick Start
 
-This ansatz enforces positivity and normalization by construction. It also produces **compact support**: the density is exactly zero wherever $f_\theta < 0$, and exhibits the square-root edge behavior $\rho \sim \sqrt{\lambda - a}$ characteristic of matrix model solutions. The network only needs to learn a smooth function that changes sign at the support boundaries — the correct singular structure comes for free from the architecture.
+### JAX (default)
 
-The action is estimated on a discretization grid and minimized with standard backpropagation.
+```bash
+pip install jax jaxlib flax optax matplotlib
+
+# Train on the Gaussian potential (recovers the Wigner semicircle)
+python train_jax.py
+
+# Plot
+python plot.py --model jax
+```
+
+### PyTorch
+
+```bash
+pip install torch matplotlib
+
+# Train
+python train_torch.py
+
+# Plot
+python plot.py --model torch
+```
+
+Both training scripts accept the same CLI flags. See [Usage](#usage) for the full reference.
+
+---
 
 ## Results
 
 ### Gaussian potential: $V(\lambda) = \frac{1}{2}\lambda^2$
 
-The network recovers the Wigner semicircle law $\rho(\lambda) = \frac{2}{\pi}\sqrt{1 - \lambda^2}$.
+Recovers the Wigner semicircle $\rho(\lambda) = \frac{2}{\pi}\sqrt{1 - \lambda^2}$.
 
-![Gaussian potential](images/m_1.0_g4_0.0.png)
+![Gaussian](images/m_1.0_g4_0.0.png)
 
-### Quartic potential (one-cut): $V(\lambda) = \frac{1}{2}\lambda^2 + g\,\lambda^4$
+### Quartic potential (one-cut): $V(\lambda) = \frac{1}{2}\lambda^2 + g\lambda^4$
 
 For positive mass and quartic coupling, the saddle point is a deformed semicircle supported on a single interval.
 
-![Quartic potential — one-cut](images/m_1.0_g4_3.0.png)
+![One-cut quartic](images/m_1.0_g4_3.0.png)
 
-### Quartic potential (two-cut): $V(\lambda) = -\frac{1}{2}\lambda^2 + g\,\lambda^4$
+### Quartic potential (two-cut): $V(\lambda) = -\frac{1}{2}\lambda^2 + g\lambda^4$
 
-For negative mass, the $\mathbb{Z}_2$-symmetric two-cut solution emerges, with support on two disjoint intervals. The network discovers the disconnected support automatically from the action alone.
+Negative mass triggers a $\mathbb{Z}_2$-symmetric two-cut phase. The network discovers the disconnected support from the action alone.
 
-![Quartic potential — two-cut](images/m_-1.0_g4_0.03.png)
+![Two-cut quartic](images/m_-1.0_g4_0.03.png)
 
 ### Filling fractions
 
-For the two-cut solution, one can impose a filling fraction $\nu = \int_0^\infty \rho\,d\lambda$ to select $\mathbb{Z}_2$-breaking saddle points. This is enforced via a penalty term in the loss. The example below uses $\nu = 0.2$.
+For the two-cut solution, imposing $\nu = \int_0^\infty \rho\,d\lambda \neq \frac{1}{2}$ selects $\mathbb{Z}_2$-breaking saddle points, enforced via a penalty term in the loss. Example: $\nu = 0.2$ (PyTorch only).
 
 ![Two-cut with filling fraction](images/m_-1.0_g4_0.02.png)
 
+---
+
 ## Architecture
 
-The network is a fully connected MLP with Tanh activations:
+Both backends implement a fully connected MLP:
 
-```
-Input (1) → [Linear → Tanh] × 6 → Linear → Output (1)
-```
+| | JAX (`model_jax.py`) | PyTorch (`model_torch.py`) |
+|---|---|---|
+| Activation | GELU | Tanh |
+| Output nonlinearity | ReLU | — |
+| Density ansatz | $\text{relu}(f_\theta) / Z$ | $e^{f_\theta} / Z$ |
+| Hidden dim | 128 | 128 |
+| Layers | 6 | 6 |
 
-Hidden dimension: 256. The raw output is passed through $\sqrt{\mathrm{ReLU}(\cdot)}$ and normalized to produce the density.
+In both cases the normalization $Z = \int \rho_\theta\,d\lambda$ is computed on the training grid via the trapezoidal rule, so positivity and unit normalization are enforced exactly.
 
-## Training
-
-- **Optimizer:** Adam, learning rate $10^{-3}$
-- **Epochs:** 5000
-- **Grid:** 1000 points on $[-L, L]$ via `torch.linspace`, with $L$ set to cover the support
-- **Integrals:** trapezoidal rule; double integral computed on the full $M \times M$ grid with diagonal excluded
+---
 
 ## Usage
 
-```bash
-# Gaussian potential
-python train.py
+All flags are defined in `config.py` and shared across `train_jax.py`, `train_torch.py`, and `plot.py`.
 
-# Quartic potential with g4 = 3
-python train.py --g4 3
+### Potential
 
-# Two-cut solution with negative mass
-python train.py --m -1 --g4 0.03 --L 5
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--m` | float | `1.0` | Coefficient of $\frac{1}{2}\lambda^2$. Negative values trigger a two-cut phase. |
+| `--g4` | float | `0.0` | Quartic coupling $g_4\lambda^4$. |
+| `--g6` | float | `0.0` | Sextic coupling $g_6\lambda^6$. |
+| `--g8` | float | `0.0` | Octic coupling $g_8\lambda^8$. |
 
-# Two-cut with filling fraction
-python train.py --m -1 --g4 0.02 --L 5 --nu 0.2
+The full potential is $V(\lambda) = \frac{m}{2}\lambda^2 + g_4\lambda^4 + g_6\lambda^6 + g_8\lambda^8$.
 
-# Plot results (same flags as training)
-python plot.py --g4 3
+### Training
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--n_epochs` | int | `4000` | Number of gradient steps. |
+| `--lr` | float | `0.001` | Adam learning rate. |
+| `--L` | float | `2.0` | Grid half-width: training and plotting grid is $[-L, L]$ with 800 points. Should comfortably contain the support. |
+
+### Physics
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--nu` | float | `0.5` | Target filling fraction $\nu = \int_0^\infty \rho\,d\lambda$. Default `0.5` is the $\mathbb{Z}_2$-symmetric saddle. Any other value activates a quadratic penalty $5(\nu_\theta - \nu)^2$ in the PyTorch loss. **Not implemented in the JAX training loop.** |
+
+### Plotting
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--model` | str | `"jax"` | Backend to load weights from: `"jax"` or `"torch"`. Used by `plot.py`. |
+| `--plot_an` | bool | `False` | Overlay the exact analytic solution. Supported for the quartic potential ($g_4 > 0$, any sign of $m$) only. |
+
+### Saved files
+
+Weights and figures are named automatically from the potential parameters:
+
+```
+saved_weights/m_{m}_g4_{g4}.pt     # PyTorch weights
+weights_jax/m_{m}_g4_{g4}.pkl      # JAX weights
+images/m_{m}_g4_{g4}.png           # Output figure
 ```
 
-## Dependencies
+### Examples
 
-- Python 3.10+
-- PyTorch
-- Matplotlib
+```bash
+# Gaussian potential (Wigner semicircle), JAX
+python train_jax.py
+python plot.py --model jax --plot_an True
+
+# One-cut quartic, PyTorch
+python train_torch.py --g4 3
+python plot.py --model torch --g4 3 --plot_an True
+
+# Two-cut phase (wider grid needed)
+python train_jax.py --m -1 --g4 0.03 --L 5
+python plot.py --model jax --m -1 --g4 0.03 --L 5 --plot_an True
+
+# Two-cut with asymmetric filling fraction (PyTorch only)
+python train_torch.py --m -1 --g4 0.02 --L 5 --nu 0.2
+python plot.py --model torch --m -1 --g4 0.02 --L 5 --nu 0.2
+
+# Sextic potential
+python train_jax.py --m 1 --g6 0.5 --L 3
+
+# Longer training
+python train_torch.py --g4 3 --n_epochs 10000 --lr 5e-4
+```
+
+---
 
 ## References
 
-- E. Brézin, C. Itzykson, G. Parisi, J.B. Zuber, *Planar Diagrams*, Commun. Math. Phys. **59** (1978) 35–51
+- E. Brézin, C. Itzykson, G. Parisi, J.-B. Zuber, *Planar Diagrams*, Commun. Math. Phys. **59** (1978) 35–51
 - P. Di Francesco, P. Ginsparg, J. Zinn-Justin, *2D Gravity and Random Matrices*, Phys. Rept. **254** (1995) 1–133, [arXiv:hep-th/9306153](https://arxiv.org/abs/hep-th/9306153)
