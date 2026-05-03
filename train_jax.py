@@ -69,6 +69,7 @@ if __name__ == "__main__":
             + args.g4 * (x**4)
             + args.g6 * (x**6)
             + args.g8 * (x**8)
+            + args.g10 * (x**10)
         )
 
     print("Starting to train..")

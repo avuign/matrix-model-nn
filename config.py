@@ -12,6 +12,7 @@ def get_args():
     parser.add_argument("--g4", type=float, default=0.0)
     parser.add_argument("--g6", type=float, default=0.0)
     parser.add_argument("--g8", type=float, default=0.0)
+    parser.add_argument("--g10", type=float, default=0.0)
     parser.add_argument("--n_epochs", type=int, default=4000)
     parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--L", type=float, default=2)
